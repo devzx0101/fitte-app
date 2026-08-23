@@ -94,35 +94,17 @@ class PoseData {
       PoseLandmarkType.rightAnkle: JointType.rightAnkle,
     };
 
-    final double rawW = imageSize.width;
-    final double rawH = imageSize.height;
+    final bool isRotated90or270 =
+        rotation == InputImageRotation.rotation90deg ||
+        rotation == InputImageRotation.rotation270deg;
+    final double previewW = isRotated90or270 ? imageSize.height : imageSize.width;
+    final double previewH = isRotated90or270 ? imageSize.width : imageSize.height;
 
     landmarkMap.forEach((mlType, jointType) {
       final landmark = pose.landmarks[mlType];
-      if (landmark != null && rawW > 0 && rawH > 0) {
-        double normX;
-        double normY;
-
-        switch (rotation) {
-          case InputImageRotation.rotation90deg:
-            // 90 deg clockwise: (x, y) -> (rawH - y, x) / (rawH, rawW)
-            normX = (rawH - landmark.y) / rawH;
-            normY = landmark.x / rawW;
-            break;
-          case InputImageRotation.rotation270deg:
-            // 270 deg clockwise: (x, y) -> (y, rawW - x) / (rawH, rawW)
-            normX = landmark.y / rawH;
-            normY = (rawW - landmark.x) / rawW;
-            break;
-          case InputImageRotation.rotation180deg:
-            normX = (rawW - landmark.x) / rawW;
-            normY = (rawH - landmark.y) / rawH;
-            break;
-          case InputImageRotation.rotation0deg:
-            normX = landmark.x / rawW;
-            normY = landmark.y / rawH;
-            break;
-        }
+      if (landmark != null && previewW > 0 && previewH > 0) {
+        double normX = landmark.x / previewW;
+        double normY = landmark.y / previewH;
 
         // For front camera, mirror horizontal axis so user's visual reflection matches screen left/right
         if (isFrontCamera) {

@@ -88,34 +88,13 @@ class SkeletonPainter extends CustomPainter {
 
     // Direct 1:1 real-time landmark projection (zero lag, moves instantly with human body)
     Offset transformPoint(double rawX, double rawY) {
-      double normX;
-      double normY;
-
-      switch (rotation) {
-        case InputImageRotation.rotation90deg:
-          normX = (rawH - rawY) / rawH;
-          normY = rawX / rawW;
-          break;
-        case InputImageRotation.rotation270deg:
-          normX = rawY / rawH;
-          normY = (rawW - rawX) / rawW;
-          break;
-        case InputImageRotation.rotation180deg:
-          normX = (rawW - rawX) / rawW;
-          normY = (rawH - rawY) / rawH;
-          break;
-        case InputImageRotation.rotation0deg:
-          normX = rawX / rawW;
-          normY = rawY / rawH;
-          break;
-      }
-
+      double screenX;
       if (cameraLensDirection == CameraLensDirection.front) {
-        normX = 1.0 - normX;
+        screenX = (previewW - rawX) * scale + offsetX;
+      } else {
+        screenX = rawX * scale + offsetX;
       }
-
-      final double screenX = normX * previewW * scale + offsetX;
-      final double screenY = normY * previewH * scale + offsetY;
+      final double screenY = rawY * scale + offsetY;
       return Offset(screenX, screenY);
     }
 
