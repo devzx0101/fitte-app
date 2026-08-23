@@ -64,13 +64,12 @@ class PoseData {
     return null;
   }
 
-  // Convert Google ML Kit Pose into our normalized PoseData (True gravity-aligned coordinates)
+  // Convert Google ML Kit Pose into our normalized PoseData
   factory PoseData.fromMLKitPose(
     Pose pose,
     Size imageSize,
     int timestamp, {
     InputImageRotation rotation = InputImageRotation.rotation0deg,
-    bool isFrontCamera = true,
   }) {
     final keypoints = <KeypointData>[];
 
@@ -97,24 +96,20 @@ class PoseData {
     final bool isRotated90or270 =
         rotation == InputImageRotation.rotation90deg ||
         rotation == InputImageRotation.rotation270deg;
-    final double previewW = isRotated90or270 ? imageSize.height : imageSize.width;
-    final double previewH = isRotated90or270 ? imageSize.width : imageSize.height;
+    final double srcWidth = isRotated90or270
+        ? (imageSize.width < imageSize.height ? imageSize.width : imageSize.height)
+        : (imageSize.width > imageSize.height ? imageSize.width : imageSize.height);
+    final double srcHeight = isRotated90or270
+        ? (imageSize.width > imageSize.height ? imageSize.width : imageSize.height)
+        : (imageSize.width < imageSize.height ? imageSize.width : imageSize.height);
 
     landmarkMap.forEach((mlType, jointType) {
       final landmark = pose.landmarks[mlType];
-      if (landmark != null && previewW > 0 && previewH > 0) {
-        double normX = landmark.x / previewW;
-        double normY = landmark.y / previewH;
-
-        // For front camera, mirror horizontal axis so user's visual reflection matches screen left/right
-        if (isFrontCamera) {
-          normX = 1.0 - normX;
-        }
-
+      if (landmark != null) {
         keypoints.add(KeypointData(
           type: jointType,
-          x: normX.clamp(0.0, 1.0),
-          y: normY.clamp(0.0, 1.0),
+          x: srcWidth > 0 ? landmark.x / srcWidth : 0.0,
+          y: srcHeight > 0 ? landmark.y / srcHeight : 0.0,
           score: landmark.likelihood,
         ));
       }

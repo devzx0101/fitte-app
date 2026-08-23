@@ -73,24 +73,25 @@ class SkeletonPainter extends CustomPainter {
     final bool isRotated90or270 =
         rotation == InputImageRotation.rotation90deg ||
         rotation == InputImageRotation.rotation270deg;
-    final double rawW = imageSize.width;
-    final double rawH = imageSize.height;
-    if (rawW <= 0 || rawH <= 0) return;
+    final double srcWidth = isRotated90or270
+        ? min(imageSize.width, imageSize.height)
+        : max(imageSize.width, imageSize.height);
+    final double srcHeight = isRotated90or270
+        ? max(imageSize.width, imageSize.height)
+        : min(imageSize.width, imageSize.height);
 
-    // Visual dimensions after camera rotation
-    final double previewW = isRotated90or270 ? rawH : rawW;
-    final double previewH = isRotated90or270 ? rawW : rawH;
+    if (srcWidth <= 0 || srcHeight <= 0) return;
 
     // BoxFit.cover scaling and center crop offsets to match full-screen preview
-    final double scale = max(size.width / previewW, size.height / previewH);
-    final double offsetX = (size.width - previewW * scale) / 2;
-    final double offsetY = (size.height - previewH * scale) / 2;
+    final double scale = max(size.width / srcWidth, size.height / srcHeight);
+    final double offsetX = (size.width - srcWidth * scale) / 2;
+    final double offsetY = (size.height - srcHeight * scale) / 2;
 
     // Direct 1:1 real-time landmark projection (zero lag, moves instantly with human body)
     Offset transformPoint(double rawX, double rawY) {
       double screenX;
       if (cameraLensDirection == CameraLensDirection.front) {
-        screenX = (previewW - rawX) * scale + offsetX;
+        screenX = (srcWidth - rawX) * scale + offsetX;
       } else {
         screenX = rawX * scale + offsetX;
       }

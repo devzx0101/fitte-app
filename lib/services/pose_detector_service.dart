@@ -57,8 +57,7 @@ class PoseDetectorService {
       final imageSize = Size(image.width.toDouble(), image.height.toDouble());
       final now = DateTime.now().millisecondsSinceEpoch;
 
-      final isFrontCamera = camera.lensDirection == CameraLensDirection.front;
-      final lensDirection = isFrontCamera
+      final lensDirection = camera.lensDirection == CameraLensDirection.front
           ? CameraLensDirection.front
           : CameraLensDirection.back;
 
@@ -69,7 +68,6 @@ class PoseDetectorService {
           imageSize,
           now,
           rotation: rotation,
-          isFrontCamera: isFrontCamera,
         ),
         imageSize: imageSize,
         rotation: rotation,
@@ -135,53 +133,12 @@ class PoseDetectorService {
     } else if (Platform.isIOS && format == null) {
       format = InputImageFormat.bgra8888;
     }
-    if (format == null || image.planes.isEmpty) return null;
+    if (format == null) return null;
 
+    if (image.planes.isEmpty) return null;
     final Uint8List bytes;
     if (image.planes.length == 1) {
       bytes = image.planes.first.bytes;
-    } else if (image.planes.length == 3 && format == InputImageFormat.nv21) {
-      // Robust YUV_420_888 to NV21 conversion for Android Camera2 API
-      final int width = image.width;
-      final int height = image.height;
-      final int ySize = width * height;
-      final int uvSize = width * height ~/ 2;
-      final Uint8List nv21 = Uint8List(ySize + uvSize);
-
-      // Copy Y channel
-      final Plane yPlane = image.planes[0];
-      final int yRowStride = yPlane.bytesPerRow;
-      if (yRowStride == width) {
-        nv21.setRange(0, ySize, yPlane.bytes);
-      } else {
-        int yOffset = 0;
-        for (int row = 0; row < height; row++) {
-          final int rowStart = row * yRowStride;
-          nv21.setRange(yOffset, yOffset + width, yPlane.bytes, rowStart);
-          yOffset += width;
-        }
-      }
-
-      // Interleave V and U channels for NV21
-      final Plane uPlane = image.planes[1];
-      final Plane vPlane = image.planes[2];
-      final int uvRowStride = uPlane.bytesPerRow;
-      final int uvPixelStride = uPlane.bytesPerPixel ?? 1;
-
-      int uvOffset = ySize;
-      final int halfHeight = height ~/ 2;
-      final int halfWidth = width ~/ 2;
-      for (int row = 0; row < halfHeight; row++) {
-        for (int col = 0; col < halfWidth; col++) {
-          final int uIndex = row * uvRowStride + col * uvPixelStride;
-          final int vIndex = row * vPlane.bytesPerRow + col * (vPlane.bytesPerPixel ?? 1);
-          if (vIndex < vPlane.bytes.length && uIndex < uPlane.bytes.length) {
-            nv21[uvOffset++] = vPlane.bytes[vIndex];
-            nv21[uvOffset++] = uPlane.bytes[uIndex];
-          }
-        }
-      }
-      bytes = nv21;
     } else {
       final WriteBuffer allBytes = WriteBuffer();
       for (final plane in image.planes) {
