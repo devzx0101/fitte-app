@@ -64,12 +64,13 @@ class PoseData {
     return null;
   }
 
-  // Convert Google ML Kit Pose into our normalized PoseData
+  // Convert Google ML Kit Pose into our normalized PoseData (True gravity-aligned coordinates)
   factory PoseData.fromMLKitPose(
     Pose pose,
     Size imageSize,
     int timestamp, {
     InputImageRotation rotation = InputImageRotation.rotation0deg,
+    bool isFrontCamera = true,
   }) {
     final keypoints = <KeypointData>[];
 
@@ -93,23 +94,45 @@ class PoseData {
       PoseLandmarkType.rightAnkle: JointType.rightAnkle,
     };
 
-    final bool isRotated90or270 =
-        rotation == InputImageRotation.rotation90deg ||
-        rotation == InputImageRotation.rotation270deg;
-    final double srcWidth = isRotated90or270
-        ? (imageSize.width < imageSize.height ? imageSize.width : imageSize.height)
-        : (imageSize.width > imageSize.height ? imageSize.width : imageSize.height);
-    final double srcHeight = isRotated90or270
-        ? (imageSize.width > imageSize.height ? imageSize.width : imageSize.height)
-        : (imageSize.width < imageSize.height ? imageSize.width : imageSize.height);
+    final double rawW = imageSize.width;
+    final double rawH = imageSize.height;
 
     landmarkMap.forEach((mlType, jointType) {
       final landmark = pose.landmarks[mlType];
-      if (landmark != null) {
+      if (landmark != null && rawW > 0 && rawH > 0) {
+        double normX;
+        double normY;
+
+        switch (rotation) {
+          case InputImageRotation.rotation90deg:
+            // 90 deg clockwise: (x, y) -> (rawH - y, x) / (rawH, rawW)
+            normX = (rawH - landmark.y) / rawH;
+            normY = landmark.x / rawW;
+            break;
+          case InputImageRotation.rotation270deg:
+            // 270 deg clockwise: (x, y) -> (y, rawW - x) / (rawH, rawW)
+            normX = landmark.y / rawH;
+            normY = (rawW - landmark.x) / rawW;
+            break;
+          case InputImageRotation.rotation180deg:
+            normX = (rawW - landmark.x) / rawW;
+            normY = (rawH - landmark.y) / rawH;
+            break;
+          case InputImageRotation.rotation0deg:
+            normX = landmark.x / rawW;
+            normY = landmark.y / rawH;
+            break;
+        }
+
+        // For front camera, mirror horizontal axis so user's visual reflection matches screen left/right
+        if (isFrontCamera) {
+          normX = 1.0 - normX;
+        }
+
         keypoints.add(KeypointData(
           type: jointType,
-          x: srcWidth > 0 ? landmark.x / srcWidth : 0.0,
-          y: srcHeight > 0 ? landmark.y / srcHeight : 0.0,
+          x: normX.clamp(0.0, 1.0),
+          y: normY.clamp(0.0, 1.0),
           score: landmark.likelihood,
         ));
       }

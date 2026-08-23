@@ -73,29 +73,49 @@ class SkeletonPainter extends CustomPainter {
     final bool isRotated90or270 =
         rotation == InputImageRotation.rotation90deg ||
         rotation == InputImageRotation.rotation270deg;
-    final double srcWidth = isRotated90or270
-        ? min(imageSize.width, imageSize.height)
-        : max(imageSize.width, imageSize.height);
-    final double srcHeight = isRotated90or270
-        ? max(imageSize.width, imageSize.height)
-        : min(imageSize.width, imageSize.height);
+    final double rawW = imageSize.width;
+    final double rawH = imageSize.height;
+    if (rawW <= 0 || rawH <= 0) return;
 
-    if (srcWidth <= 0 || srcHeight <= 0) return;
+    // Visual dimensions after camera rotation
+    final double previewW = isRotated90or270 ? rawH : rawW;
+    final double previewH = isRotated90or270 ? rawW : rawH;
 
     // BoxFit.cover scaling and center crop offsets to match full-screen preview
-    final double scale = max(size.width / srcWidth, size.height / srcHeight);
-    final double offsetX = (size.width - srcWidth * scale) / 2;
-    final double offsetY = (size.height - srcHeight * scale) / 2;
+    final double scale = max(size.width / previewW, size.height / previewH);
+    final double offsetX = (size.width - previewW * scale) / 2;
+    final double offsetY = (size.height - previewH * scale) / 2;
 
     // Direct 1:1 real-time landmark projection (zero lag, moves instantly with human body)
     Offset transformPoint(double rawX, double rawY) {
-      double screenX;
-      if (cameraLensDirection == CameraLensDirection.front) {
-        screenX = (srcWidth - rawX) * scale + offsetX;
-      } else {
-        screenX = rawX * scale + offsetX;
+      double normX;
+      double normY;
+
+      switch (rotation) {
+        case InputImageRotation.rotation90deg:
+          normX = (rawH - rawY) / rawH;
+          normY = rawX / rawW;
+          break;
+        case InputImageRotation.rotation270deg:
+          normX = rawY / rawH;
+          normY = (rawW - rawX) / rawW;
+          break;
+        case InputImageRotation.rotation180deg:
+          normX = (rawW - rawX) / rawW;
+          normY = (rawH - rawY) / rawH;
+          break;
+        case InputImageRotation.rotation0deg:
+          normX = rawX / rawW;
+          normY = rawY / rawH;
+          break;
       }
-      final double screenY = rawY * scale + offsetY;
+
+      if (cameraLensDirection == CameraLensDirection.front) {
+        normX = 1.0 - normX;
+      }
+
+      final double screenX = normX * previewW * scale + offsetX;
+      final double screenY = normY * previewH * scale + offsetY;
       return Offset(screenX, screenY);
     }
 
