@@ -1,0 +1,27 @@
+name: fitte
+description: AI-powered gamified workout coach with real-time pose tracking.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  camera: ^0.12.0+2
+  google_mlkit_pose_detection: ^0.16.1
+  google_mlkit_commons: ^0.13.0
+  audioplayers: ^6.1.0
+  google_fonts: ^8.2.1
+  flutter_svg: ^2.0.17
+  shared_preferences: ^2.5.5
+  permission_handler: ^11.3.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
